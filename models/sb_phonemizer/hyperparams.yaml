@@ -1,0 +1,507 @@
+# Generated 2022-07-09 from:
+# /notebooks/speechbrain/recipes/LibriSpeech/G2P/hparams/hparams_g2p_rnn.yaml
+# yamllint disable
+# ################################
+# Model: LSTM (encoder) + GRU (decoder) (tokenized)
+# Authors:
+# Loren Lugosch & Mirco Ravanelli 2020
+# Artem Ploujnikov 2021
+# ################################
+
+# Seed needs to be set at top of yaml, before objects with parameters are made
+seed: 1234
+__set_seed: !apply:torch.manual_seed [1234]
+
+
+# Tokenizers
+char_tokenize: false
+char_token_type: unigram  # ["unigram", "bpe", "char"]
+char_token_output: 512
+char_token_wordwise: true
+phn_tokenize: false
+phn_token_type: unigram  # ["unigram", "bpe", "char"]
+phn_token_output: 512  # index(blank/eos/bos/unk) = 0
+phn_token_wordwise: true
+character_coverage: 1.0
+
+
+phonemes_count: 43
+graphemes_count: 31
+phonemes_enable_space: true
+
+# Training Parameters
+lexicon_epochs: 50
+lexicon_ctc_epochs: 10
+lexicon_limit_to_stop: 50                    # No stopping by default, can override
+lexicon_limit_warmup: 50                    # No stopping by default, can override
+sentence_epochs: 13
+sentence_ctc_epochs: 10
+sentence_limit_to_stop: 3
+sentence_limit_warmup: 3
+homograph_epochs: 50
+homograph_ctc_epochs: 10
+homograph_limit_to_stop: 5
+homograph_limit_warmup: 10
+lexicon_batch_size: 1024
+sentence_batch_size: 32
+homograph_batch_size: 32
+ctc_weight: 0.5
+homograph_loss_weight: 2.0
+lr: 0.002
+save_for_pretrained: true
+
+# Model parameters
+output_neurons: &id004 !apply:speechbrain.utils.hparams.choice
+
+  value: false
+  choices:
+    true: 513
+    false: 43
+
+enc_num_embeddings: &id005 !apply:speechbrain.utils.hparams.choice
+  value: false
+  choices:
+    true: 513
+    false: 31
+
+enc_dropout: 0.5
+enc_neurons: 512
+enc_num_layers: 4
+dec_dropout: 0.5
+dec_neurons: 512
+dec_att_neurons: 256
+dec_num_layers: 4
+embedding_dim: 512
+
+# Determines whether to use BOS (beginning-of-sequence) or EOS (end-of-sequence) tokens
+# Available modes:
+# raw: no BOS/EOS tokens are added
+# bos: a beginning-of-sequence token is added
+# eos: an end-of-sequence token is added
+grapheme_sequence_mode: bos
+phoneme_sequence_mode: bos
+
+
+# Special Token information
+bos_index: 0
+eos_index: 1
+blank_index: 2
+unk_index: 2
+token_space_index: 512
+
+
+# Language Model
+lm_emb_dim: 256 # dimension of the embeddings
+lm_rnn_size: 512 # dimension of hidden layers
+lm_layers: 2 # number of hidden layers
+lm_output_neurons: 43
+
+# Beam Searcher
+use_language_model: false
+beam_search_min_decode_ratio: 0
+beam_search_max_decode_ratio: 1.0
+beam_search_beam_size: 16
+beam_search_beam_size_valid: 16
+beam_search_eos_threshold: 10.0
+beam_search_using_max_attn_shift: false
+beam_search_max_attn_shift: 10
+beam_search_coverage_penalty: 5.0
+beam_search_lm_weight: 0.5
+beam_search_ctc_weight_decode: 0.4
+beam_search_temperature: 1.25
+beam_search_temperature_lm: 1.0
+
+# Word embeddings
+use_word_emb: true
+word_emb_model: bert-base-uncased
+word_emb_dim: 768
+word_emb_enc_dim: 256
+word_emb_norm_type: batch
+
+graphemes: &id028
+- A
+- B
+- C
+- D
+- E
+- F
+- G
+- H
+- I
+- J
+- K
+- L
+- M
+- N
+- O
+- P
+- Q
+- R
+- S
+- T
+- U
+- V
+- W
+- X
+- Y
+- Z
+- "'"
+- ' '
+
+phonemes: &id001
+
+
+- AA
+- AE
+- AH
+- AO
+- AW
+- AY
+- B
+- CH
+- D
+- DH
+- EH
+- ER
+- EY
+- F
+- G
+- HH
+- IH
+- IY
+- JH
+- K
+- L
+- M
+- N
+- NG
+- OW
+- OY
+- P
+- R
+- S
+- SH
+- T
+- TH
+- UH
+- UW
+- V
+- W
+- Y
+- Z
+- ZH
+- ' '
+
+enc_input_dim: &id003 !apply:speechbrain.lobes.models.g2p.model.input_dim
+  use_word_emb: true
+  word_emb_enc_dim: 256
+  embedding_dim: 512
+
+
+phn_char_map: &id002 !apply:speechbrain.lobes.models.g2p.dataio.build_token_char_map
+
+
+# Models
+  tokens: *id001
+char_phn_map: &id023 !apply:speechbrain.lobes.models.g2p.dataio.flip_map
+  map_dict: *id002
+enc: &id006 !new:speechbrain.nnet.RNN.LSTM
+  input_shape: [null, null, *id003]
+  bidirectional: true
+  hidden_size: 512
+  num_layers: 4
+  dropout: 0.5
+
+lin: &id010 !new:speechbrain.nnet.linear.Linear
+  input_size: 512
+  n_neurons: *id004
+  bias: false
+
+ctc_lin: &id013 !new:speechbrain.nnet.linear.Linear
+  input_size: 1024
+  n_neurons: *id004
+encoder_emb: &id007 !new:speechbrain.nnet.embedding.Embedding
+  num_embeddings: *id005
+  embedding_dim: 512
+
+emb: &id008 !new:speechbrain.nnet.embedding.Embedding
+  num_embeddings: *id004
+  embedding_dim: 512
+
+dec: &id009 !new:speechbrain.nnet.RNN.AttentionalRNNDecoder
+  enc_dim: 1024
+  input_size: 512
+  rnn_type: gru
+  attn_type: content
+  dropout: 0.5
+  hidden_size: 512
+  attn_dim: 256
+  num_layers: 4
+
+word_emb_enc: &id012 !new:speechbrain.lobes.models.g2p.model.WordEmbeddingEncoder
+
+  word_emb_dim: 768
+  word_emb_enc_dim: 256
+  norm_type: batch
+
+word_emb: !apply:speechbrain.lobes.models.g2p.dataio.lazy_init
+  init: !name:speechbrain.wordemb.transformer.TransformerWordEmbeddings
+    model: bert-base-uncased
+
+log_softmax: &id011 !new:speechbrain.nnet.activations.Softmax
+  apply_log: true
+
+modules:
+  model: &id014 !new:speechbrain.lobes.models.g2p.model.AttentionSeq2Seq
+    enc: *id006
+    encoder_emb: *id007
+    emb: *id008
+    dec: *id009
+    lin: *id010
+    out: *id011
+    use_word_emb: true
+    word_emb_enc: *id012
+  enc: *id006
+  encoder_emb: *id007
+  emb: *id008
+  dec: *id009
+  lin: *id010
+  ctc_lin: *id013
+  out: *id011
+  word_emb:
+  word_emb_enc: *id012
+model: *id014
+lm_model: &id015 !new:speechbrain.lobes.models.RNNLM.RNNLM
+  embedding_dim: 256
+  rnn_layers: 2
+  rnn_neurons: 512
+  output_neurons: 43
+  return_hidden: true
+
+opt_class: !name:torch.optim.Adam
+  lr: 0.002
+
+beam_searcher: &id029 !new:speechbrain.decoders.S2SRNNBeamSearcher
+  embedding: *id008
+  decoder: *id009
+  linear: *id010
+  ctc_linear: *id013
+  bos_index: 0
+  eos_index: 1
+  blank_index: 2
+  min_decode_ratio: 0
+  max_decode_ratio: 1.0
+  beam_size: 16
+  eos_threshold: 10.0
+  using_max_attn_shift: false
+  max_attn_shift: 10
+  coverage_penalty: 5.0
+  ctc_weight: 0.4
+
+beam_searcher_valid: !new:speechbrain.decoders.S2SRNNBeamSearcher
+  embedding: *id008
+  decoder: *id009
+  linear: *id010
+  ctc_linear: *id013
+  bos_index: 0
+  eos_index: 1
+  blank_index: 2
+  min_decode_ratio: 0
+  max_decode_ratio: 1.0
+  beam_size: 16
+  eos_threshold: 10.0
+  using_max_attn_shift: false
+  max_attn_shift: 10
+  coverage_penalty: 5.0
+  ctc_weight: 0.4
+
+beam_searcher_lm: !new:speechbrain.decoders.seq2seq.S2SRNNBeamSearchLM
+  embedding: *id008
+  decoder: *id009
+  linear: *id010
+  ctc_linear: *id013
+  language_model: *id015
+  bos_index: 0
+  eos_index: 1
+  blank_index: 2
+  min_decode_ratio: 0
+  max_decode_ratio: 1.0
+  beam_size: 16
+  eos_threshold: 10.0
+  using_max_attn_shift: false
+  max_attn_shift: 10
+  coverage_penalty: 5.0
+  ctc_weight: 0.4
+  lm_weight: 0.5
+  temperature: 1.25
+  temperature_lm: 1.0
+
+
+lr_annealing: &id018 !new:speechbrain.nnet.schedulers.NewBobScheduler
+  initial_value: 0.002
+  improvement_threshold: 0.0
+  annealing_factor: 0.8
+  patient: 0
+
+homograph_extractor: !new:speechbrain.lobes.models.g2p.homograph.SubsequenceExtractor
+
+seq_cost: &id016 !name:speechbrain.nnet.losses.nll_loss
+
+  label_smoothing: 0.1
+
+ctc_cost: !name:speechbrain.nnet.losses.ctc_loss
+  blank_index: 2
+
+seq_cost_metric: &id017 !name:speechbrain.nnet.losses.nll_loss
+
+  label_smoothing: 0.1
+  reduction: batch
+
+homograph_cost: !new:speechbrain.lobes.models.g2p.homograph.SubsequenceLoss
+  seq_cost: *id016
+seq_stats: !name:speechbrain.utils.metric_stats.MetricStats
+  metric: *id017
+seq_stats_homograph: !name:speechbrain.utils.metric_stats.MetricStats
+  metric: *id017
+classification_stats_homograph: !name:speechbrain.utils.metric_stats.ClassificationStats
+
+per_stats: !name:speechbrain.utils.metric_stats.ErrorRateStats
+per_stats_homograph: !name:speechbrain.utils.metric_stats.ErrorRateStats
+
+
+model_output_keys:
+- p_seq
+- char_lens
+- encoder_out
+
+grapheme_encoder: &id027 !new:speechbrain.dataio.encoder.TextEncoder
+phoneme_encoder: &id024 !new:speechbrain.dataio.encoder.TextEncoder
+
+
+grapheme_tokenizer: !apply:speechbrain.lobes.models.g2p.dataio.lazy_init
+  init: !name:speechbrain.tokenizers.SentencePiece.SentencePiece
+    model_dir: grapheme_tokenizer
+    bos_id: 0
+    eos_id: 1
+    unk_id: 2
+    vocab_size: 512
+    annotation_train: tokenizer_annotation_train.json
+    annotation_read: char
+    model_type: unigram                    # ["unigram", "bpe", "char"]
+    character_coverage: 1.0
+    annotation_format: json
+    text_file: grapheme_annotations.txt
+
+phoneme_tokenizer: &id022 !apply:speechbrain.lobes.models.g2p.dataio.lazy_init
+  init: !name:speechbrain.tokenizers.SentencePiece.SentencePiece
+    model_dir: phoneme_tokenizer
+    bos_id: 0
+    eos_id: 1
+    unk_id: 2
+    vocab_size: 512
+    annotation_train: tokenizer_annotation_train.json
+    annotation_read: phn
+    model_type: unigram                   # ["unigram", "bpe", "char"]
+    character_coverage: 1.0
+    annotation_list_to_check: [tokenizer_annotation_valid.json]
+    annotation_format: json
+    text_file: phoneme_annotations.txt
+
+out_phoneme_decoder_tok: &id025 !apply:speechbrain.lobes.models.g2p.dataio.char_map_detokenize
+  tokenizer: *id022
+  char_map: *id023
+  token_space_index: 512
+  wordwise: true
+
+out_phoneme_decoder_raw: &id026 !name:speechbrain.lobes.models.g2p.dataio.text_decode
+
+  encoder: *id024
+out_phoneme_decoder: !apply:speechbrain.utils.hparams.choice
+  value: false
+  choices:
+    true: *id025
+    false: *id026
+encode_pipeline:
+  batch: false
+  use_padded_data: true
+  output_keys:
+  - grapheme_list
+  - grapheme_encoded_list
+  - grapheme_encoded
+  - word_emb
+  init:
+  - func: !name:speechbrain.lobes.models.g2p.dataio.enable_eos_bos
+      encoder: *id027
+      tokens: *id028
+      bos_index: 0
+      eos_index: 1
+  - func: !name:speechbrain.lobes.models.g2p.dataio.enable_eos_bos
+      encoder: *id024
+      tokens: *id001
+      bos_index: 0
+      eos_index: 1
+  steps:
+  - func: !name:speechbrain.lobes.models.g2p.dataio.clean_pipeline
+      graphemes: *id028
+    takes: txt
+    provides: txt_cleaned
+  - func: !name:speechbrain.lobes.models.g2p.dataio.grapheme_pipeline
+      grapheme_encoder: *id027
+    takes: txt_cleaned
+    provides:
+    - grapheme_list
+    - grapheme_encoded_list
+    - grapheme_encoded_raw
+
+  - func: !name:speechbrain.lobes.models.g2p.dataio.add_bos_eos
+      encoder: *id027
+    takes: grapheme_encoded_list
+    provides:
+    - grapheme_encoded
+    - grapheme_len
+    - grapheme_encoded_eos
+    - grapheme_len_eos
+  - func: !name:speechbrain.lobes.models.g2p.dataio.word_emb_pipeline
+      word_emb: !ref <word_emb>
+      grapheme_encoder: !ref <grapheme_encoder>
+      use_word_emb: !ref <use_word_emb>
+    takes:
+    - txt
+    - grapheme_encoded
+    - grapheme_len
+    provides: word_emb
+
+decode_pipeline:
+  batch: true
+  output_keys:
+  - phonemes
+  steps:
+  - func: !name:speechbrain.lobes.models.g2p.dataio.beam_search_pipeline
+      beam_searcher: *id029
+    takes:
+    - char_lens
+    - encoder_out
+    provides:
+    - hyps
+    - scores
+  - func: !apply:speechbrain.utils.hparams.choice
+      value: false
+      choices:
+        true: !apply:speechbrain.lobes.models.g2p.dataio.char_map_detokenize
+          tokenizer: *id022
+          char_map: *id023
+          token_space_index: 512
+          wordwise: true
+        false: !name:speechbrain.lobes.models.g2p.dataio.phoneme_decoder_pipeline
+          phoneme_encoder: *id024
+    takes:
+    - hyps
+    provides:
+    - phonemes
+
+
+pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
+  loadables:
+    model: *id014
+    ctc_lin: *id013
+
