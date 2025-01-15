@@ -15,7 +15,8 @@ app = FastAPI()
 engines = {}
 phonemizers = {}
 
-
+model_repo_dict = {'en_us_a':'mostafaashahin/SA_US_Adult',
+                   'en_aus_c':'mostafaashahin/SA_Aus_Child'}
 
 def create_phonemizer_fn(model_string):
     if model_string == 'en_us_a':
@@ -100,8 +101,8 @@ async def init_engines():
     model_combinations = [("en_us", "a"), ("en_aus", "c")]
     for lang, age_cat in model_combinations:
         model_string = f'{lang}_{age_cat}'
-        engine = transcriber.transcribe_SA(model_path=os.path.join('models',model_string), verbose=0)
-        p2att_file_path = os.path.join('models',model_string,'p2att.csv')
+        engine = transcriber.transcribe_SA(model_path=model_repo_dict[model_string], verbose=0)
+        p2att_file_path = os.path.join('data',model_string,'p2att.csv')
         engines[model_string] = (engine, p2att_file_path)
         phonemizers[model_string] = create_phonemizer_fn(model_string)
     

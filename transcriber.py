@@ -54,16 +54,18 @@ class transcribe_SA():
         self.get_available_attributes()
         self.get_att_binary_group_indexs()
 
-    def load_model(self):
-        if not os.path.exists(self.model_path):
-            logger.error(f'Model file {self.model_path} is not exist')
-            raise FileNotFoundError
 
-        self.processor = Wav2Vec2Processor.from_pretrained(self.model_path)
-        self.model = Wav2Vec2ForCTC.from_pretrained(self.model_path)
+    def load_model(self):
+        try:
+            self.processor = Wav2Vec2Processor.from_pretrained(self.model_path)
+            self.model = Wav2Vec2ForCTC.from_pretrained(self.model_path)
+        except OSError as r:
+            logger.error(f'Model file or repo {self.model_path} is not exist \n {r}')
+            raise OSError
         self.model.to(self.device)
         self.pad_token_id = self.processor.tokenizer.pad_token_id
         self.sampling_rate = self.processor.feature_extractor.sampling_rate
+
 
     def get_available_attributes(self):
         if not hasattr(self, 'model'):
