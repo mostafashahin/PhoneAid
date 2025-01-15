@@ -1,0 +1,14 @@
+fastapi[standard]
+torch==2.2.0
+torchvision==0.17.0
+datasets==2.17.0
+librosa
+transformers[torch]
+speechbrain
+deep-phonemizer
+numpy==1.26.4
+evaluate
+jiwer
+fire
+python-Levenshtein
+cmudict
