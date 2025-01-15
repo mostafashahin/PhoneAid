@@ -4,7 +4,7 @@ torchvision==0.17.0
 datasets==2.17.0
 librosa
 transformers[torch]
-speechbrain
+speechbrain==0.5.16
 deep-phonemizer
 numpy==1.26.4
 evaluate
