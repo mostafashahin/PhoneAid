@@ -122,6 +122,21 @@ async def analyze(
     # Read the speech signal
     speech_data = await speech_signal.read()
 
+    # Write it to file for debugibg
+    wav_fname = f"{utils.generate_file_basename()}.wav"
+    json_fname = f"{utils.generate_file_basename()}.json"
+    data = {
+            "target_word": target_word,
+            "lang": lang,
+            "age_cat": age_cat
+            }
+    os.makedirs('tmp', exist_ok=True)
+    with open(os.path.join('tmp',wav_fname), 'wb') as f:
+        f.write(speech_data)
+
+    with open(os.path.join('tmp',json_fname), 'w') as f:
+        json.dump(data, f, indent=4)
+
     model_string = f'{lang}_{age_cat}'
 
     if model_string not in engines:
